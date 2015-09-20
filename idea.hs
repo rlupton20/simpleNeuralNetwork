@@ -1,7 +1,6 @@
 
--- A layer is a collection of neurons all with the same number of inputs
--- We use this number as a descriptor for the layer
-type Layer = Int
+-- A layer has a length and an arity
+type Layer = (Int, Int)
 
 type Neuron = (Float, [Float])
 
@@ -12,11 +11,11 @@ buildNeur [] = (0, [])
 buildNeur (x:xs) = (x,xs)
 
 buildLayer :: Layer -> [Float] -> Network
-buildLayer n pars = \ins -> map (fire ins) lyr
-                            where lyr = assemble n pars
-                                  assemble 0 _ = []
-                                  assemble _ [] = []
-                                  assemble n xs = buildNeur (take (n+1) xs) : assemble n (drop (n+1) xs)
+buildLayer (len, ar) pars = \ins -> map (fire ins) lyr
+                            where lyr = assemble (len, ar) pars
+                                  assemble (_, 0) _ = []
+                                  assemble (0, ar) _ = []
+                                  assemble (len, ar) xs = buildNeur (take (ar+1) xs) : assemble (len-1, ar) (drop (ar+1) xs)
 
 fire :: [Float] -> Neuron -> Float
 fire inputs (bias, weights) = 1 / (1 + exp (-dot-bias))
