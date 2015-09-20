@@ -24,3 +24,4 @@ addLayer l n = l:n
 
 runNetwork :: Network -> [Float] -> [Float]
 runNetwork net ins = foldr (flip step) ins net
+
