@@ -1,27 +1,54 @@
-import Data.Array
+-- A layer has a length and an arity
+type Layer = (Int, Int)
 
 type Neuron = (Float, [Float])
-type Layer = [Neuron]
 
-type Network = [Layer]
+-- This should develop as more structures become possible
+-- For the moment though a network is just a list of layers
+-- all outputs from a previous layer are fed into each neuron
+-- in the next.
+type NetworkType = [Layer]
 
-startNode :: Int -> Neuron
-startNode n = (0, (replicate n 0))
+type UnrolledNetwork = (NetworkType, [Float])
+
+type Network = [Float] -> [Float]
+
+buildNeur :: [Float] -> Neuron
+buildNeur [] = (0, [])
+buildNeur (x:xs) = (x,xs)
+
+-- Note that we can now build a network by composing layers
+buildLayer :: Layer -> [Float] -> Network
+buildLayer (len, ar) pars = \ins -> map (fire ins) lyr
+                            where lyr = assemble (len, ar) pars
+                                  assemble (_, 0) _ = []
+                                  assemble (0, ar) _ = []
+                                  assemble (len, ar) xs = buildNeur (take (ar+1) xs) : assemble (len-1, ar) (drop (ar+1) xs)
 
 fire :: [Float] -> Neuron -> Float
 fire inputs (bias, weights) = 1 / (1 + exp (-dot-bias))
 	where dot = sum $ zipWith (*) inputs weights
 
-nextLayer :: Layer -> Int -> Layer
-nextLayer nes n = replicate n (startNode m)
-                  where m = length nes
+buildNetwork :: UnrolledNetwork -> Network
+buildNetwork ([], _)  = id
+buildNetwork (_, []) = id
+buildNetwork ((l:ls), pars) = rest . layer
+  where layer = buildLayer l $ take numpars pars
+        rest = buildNetwork (ls, drop numpars pars)
+        numpars = len * (ar + 1)
+        (len, ar) = l
 
-step :: [Float] -> Layer -> [Float]
-step ins layer = map (fire ins) $ layer
+newNetwork :: NetworkType -> UnrolledNetwork
+newNetwork ls = (ls, zeros)
+                where zeros = replicate numzeros 0
+                      numzeros = foldr (\l acc -> acc + numpars l) 0 ls
+                      numpars (len, ar) = len * (ar + 1)
 
-addLayer :: Layer -> Network -> Network
-addLayer l n = l:n
+adjust :: UnrolledNetwork -> [Float] -> UnrolledNetwork
+adjust (l, pars) fs = (l, zipWith (+) pars (fs ++ repeat 0))
 
-runNetwork :: Network -> [Float] -> [Float]
-runNetwork net ins = foldr (flip step) ins net
-
+simpleNetwork :: [Int] -> UnrolledNetwork
+simpleNetwork ls@(ins:_) = newNetwork $ simpleType ins ls
+  where simpleType _ [] = [(0,0)]
+        simpleType i [n] = [(n, i)]
+        simpleType i (n:nss) = (n,i) : simpleType n nss
