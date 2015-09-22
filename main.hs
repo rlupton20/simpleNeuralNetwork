@@ -80,5 +80,5 @@ lesson net@(struc, par) tests = V.map (\x -> - delta * x) c
         c = grad (\param -> cost (struc, param) tests) par
 
 evolve :: UnrolledNetwork -> [Test] -> UnrolledNetwork
-evolve net@(struc, par) tests = (struc, V.zipWith (+) par tweaks)
-  where tweaks = lesson net tests 
+evolve net@(struc, par) tests = (struc, V.zipWith (+) par adjust)
+  where adjust = lesson net tests 
