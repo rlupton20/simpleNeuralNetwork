@@ -1,4 +1,3 @@
-
 -- A layer has a length and an arity
 type Layer = (Int, Int)
 
