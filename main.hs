@@ -1,51 +1,50 @@
+import qualified Data.Vector as V
+import Data.Vector (Vector)
+
 -- A layer has a length and an arity
 type Layer = (Int, Int)
-
-type Neuron = (Float, [Float])
+type Neuron = (Float, Vector Float)
 
 -- This should develop as more structures become possible
 -- For the moment though a network is just a list of layers
 -- all outputs from a previous layer are fed into each neuron
 -- in the next.
 type NetworkType = [Layer]
+type UnrolledNetwork = (NetworkType, Vector Float)
+type Network = Vector Float -> Vector Float
 
-type UnrolledNetwork = (NetworkType, [Float])
+buildNeur :: Vector Float -> Neuron
+buildNeur pars
+  | V.null pars = (0, V.empty)
+  | otherwise  = (V.head pars, V.tail pars)
 
-type Network = [Float] -> [Float]
+fire :: Vector Float -> Neuron -> Float
+fire inputs (bias, weights) = 1 / (1 + exp (-dotprod-bias))
+	where dotprod = V.sum $ V.zipWith (*) inputs weights
 
-buildNeur :: [Float] -> Neuron
-buildNeur [] = (0, [])
-buildNeur (x:xs) = (x,xs)
+buildLayerNeurs :: Layer -> Vector Float -> Vector Neuron
+buildLayerNeurs (len, arity) pars
+  | len == 0 = V.empty
+  | otherwise = (buildNeur $ V.take (arity + 1) pars) `V.cons` (buildLayerNeurs (len-1, arity) $ V.drop (arity + 1) pars)
 
--- Note that we can now build a network by composing layers
-buildLayer :: Layer -> [Float] -> Network
-buildLayer (len, ar) pars = \ins -> map (fire ins) lyr
-                            where lyr = assemble (len, ar) pars
-                                  assemble (_, 0) _ = []
-                                  assemble (0, ar) _ = []
-                                  assemble (len, ar) xs = buildNeur (take (ar+1) xs) : assemble (len-1, ar) (drop (ar+1) xs)
+layerToNetwork :: Layer -> Vector Float -> Network
+layerToNetwork layer pars = \inputs -> V.map (fire inputs) (buildLayerNeurs layer pars)
 
-fire :: [Float] -> Neuron -> Float
-fire inputs (bias, weights) = 1 / (1 + exp (-dot-bias))
-	where dot = sum $ zipWith (*) inputs weights
+-- Not sure if this is really needed, but it might be useful later
+-- This function assembles each individual layer sequentially
+buildLayers :: UnrolledNetwork -> [Network]
+buildLayers ([], _) = []
+buildLayers ((l:ls) , pars) = let (len, arity) = l; numPars = len * (arity + 1) in
+  layerToNetwork l (V.take numPars pars) : buildLayers (ls, V.drop numPars pars)
 
 buildNetwork :: UnrolledNetwork -> Network
-buildNetwork ([], _)  = id
-buildNetwork (_, []) = id
-buildNetwork ((l:ls), pars) = rest . layer
-  where layer = buildLayer l $ take numpars pars
-        rest = buildNetwork (ls, drop numpars pars)
-        numpars = len * (ar + 1)
-        (len, ar) = l
+buildNetwork = foldr (\f acc -> acc . f) id . buildLayers
 
 newNetwork :: NetworkType -> UnrolledNetwork
 newNetwork ls = (ls, zeros)
-                where zeros = replicate numzeros 0
+                where zeros = V.replicate numzeros 0
                       numzeros = foldr (\l acc -> acc + numpars l) 0 ls
                       numpars (len, ar) = len * (ar + 1)
-
-adjust :: UnrolledNetwork -> [Float] -> UnrolledNetwork
-adjust (l, pars) fs = (l, zipWith (+) pars (fs ++ repeat 0))
 
 simpleNetwork :: [Int] -> UnrolledNetwork
 simpleNetwork ls@(ins:_) = newNetwork $ simpleType ins ls
