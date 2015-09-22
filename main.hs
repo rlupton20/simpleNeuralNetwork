@@ -82,3 +82,6 @@ lesson net@(struc, par) tests = V.map (\x -> - delta * x) c
 evolve :: UnrolledNetwork -> [Test] -> UnrolledNetwork
 evolve net@(struc, par) tests = (struc, V.zipWith (+) par adjust)
   where adjust = lesson net tests 
+
+askNetwork :: UnrolledNetwork -> Vector Float -> Vector Float
+askNetwork net inputs = (buildNetwork net) $ inputs
