@@ -59,10 +59,11 @@ simpleNetwork ls@(ins:_) = newNetwork $ simpleType ins ls
 
 -- A smooth measure of error given a list of tests
 cost :: UnrolledNetwork -> [Test] -> Float
-cost net tests = V.sum . V.map (^2) $ V.zipWith (-) results targets
+cost net tests = (V.sum . V.map (^2) $ V.zipWith (-) results targets) / n
   where results = V.concat $ map (network.fst) tests
         targets = V.concat $ map snd tests
         network = (buildNetwork net)
+        n = fromIntegral $ length tests
 
 -- Approximate a derivative of a single valued function
 derive :: (Float -> Float) -> Float -> Float
