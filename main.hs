@@ -1,5 +1,5 @@
 import qualified Data.Vector as V
-import Data.Vector (Vector)
+import Data.Vector (Vector, (!), (//))
 
 -- A layer has a length and an arity
 type Layer = (Int, Int)
@@ -12,6 +12,11 @@ type Neuron = (Float, Vector Float)
 type NetworkType = [Layer]
 type UnrolledNetwork = (NetworkType, Vector Float)
 type Network = Vector Float -> Vector Float
+
+-- Types for learning
+-- Tests have two parts, an input, and an expected output
+type Test = (Vector Float, Vector Float)
+
 
 buildNeur :: Vector Float -> Neuron
 buildNeur pars
@@ -51,3 +56,29 @@ simpleNetwork ls@(ins:_) = newNetwork $ simpleType ins ls
   where simpleType _ [] = [(0,0)]
         simpleType i [n] = [(n, i)]
         simpleType i (n:nss) = (n,i) : simpleType n nss
+
+-- A smooth measure of error given a list of tests
+cost :: UnrolledNetwork -> [Test] -> Float
+cost net tests = V.sum . V.map (^2) $ V.zipWith (-) results targets
+  where results = V.concat $ map (network.fst) tests
+        targets = V.concat $ map snd tests
+        network = (buildNetwork net)
+
+-- Approximate a derivative of a single valued function
+derive :: (Float -> Float) -> Float -> Float
+derive f x = ((f $ x + h) - (f $ x)) / h
+  where h = 0.00001  -- h is small
+
+grad :: (Vector Float -> Float) -> Vector Float -> Vector Float
+grad f x = V.imap partial x
+  where partial i _ = derive (\p ->  (f $ x // [(i,p)] )) (x!i)
+
+-- Yields an adjustment to make to the parameter vector
+lesson :: UnrolledNetwork -> [Test] -> Vector Float
+lesson net@(struc, par) tests = V.map (\x -> - delta * x) c
+  where delta = 1
+        c = grad (\param -> cost (struc, param) tests) par
+
+evolve :: UnrolledNetwork -> [Test] -> UnrolledNetwork
+evolve net@(struc, par) tests = (struc, V.zipWith (+) par tweaks)
+  where tweaks = lesson net tests 
