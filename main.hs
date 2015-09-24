@@ -67,8 +67,9 @@ cost net tests = (V.sum . V.map (^2) $ V.zipWith (-) results targets) / n
 
 -- Approximate a derivative of a single valued function
 derive :: (Float -> Float) -> Float -> Float
-derive f x = ((f $ x + h) - (f $ x)) / h
-  where h = 0.00001  -- h is small
+--derive f x = ((f $ x + h) - (f $ x)) / h
+derive f x = ((f $ x + h) - (f $ x - h)) / (2*h)
+  where h = 0.0001  -- h is small
 
 grad :: (Vector Float -> Float) -> Vector Float -> Vector Float
 grad f x = V.imap partial x
@@ -86,3 +87,9 @@ evolve net@(struc, par) tests = (struc, V.zipWith (+) par adjust)
 
 askNetwork :: UnrolledNetwork -> Vector Float -> Vector Float
 askNetwork net inputs = (buildNetwork net) $ inputs
+
+-- test
+a = simpleNetwork [2,2,1]
+gens = mapM (\x -> [0,1]) [1,1] :: [[Float]]
+tests = map (\x -> (V.fromList x, if sum x == 2 then V.fromList [1] else V.fromList [0])) gens :: [(Vector Float, Vector Float)]
+b = foldl evolve a (replicate 100 tests)
