@@ -17,7 +17,6 @@ type Network = Vector Float -> Vector Float
 -- Tests have two parts, an input, and an expected output
 type Test = (Vector Float, Vector Float)
 
-
 buildNeur :: Vector Float -> Neuron
 buildNeur pars
   | V.null pars = (0, V.empty)
@@ -89,7 +88,7 @@ askNetwork :: UnrolledNetwork -> Vector Float -> Vector Float
 askNetwork net inputs = (buildNetwork net) $ inputs
 
 -- test
-a = simpleNetwork [2,2,1]
-gens = mapM (\x -> [0,1]) [1,1] :: [[Float]]
+a = simpleNetwork [2,1]
+gens = mapM (\x -> [0,1]) ['*','*'] :: [[Float]]
 tests = map (\x -> (V.fromList x, if sum x == 2 then V.fromList [1] else V.fromList [0])) gens :: [(Vector Float, Vector Float)]
-b = foldl evolve a (replicate 100 tests)
+b = foldl evolve a (replicate 1000 tests)
